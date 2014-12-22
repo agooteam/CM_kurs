@@ -5,6 +5,7 @@ class MKE{
 		Matrix A;
 		TYPE D[3][3];//матрица коэффициентов
 		TYPE Local[3][3];//локальная матрица
+		TYPE Local_pr[3];//локальный вектор правой части
 		int count_felem;//количество конечных элементов
 		int count_node;//количество узлов
 		TYPE detD;//Определитель матрицы D
@@ -21,6 +22,8 @@ class MKE{
 		TYPE *x;//неизвестный вектор
 		node *nodes;//узлы
 		FELEM *felem;//конечные элементы
+		bool flag_lyambda;//true - лямбда зависит от координат, иначе от области
+		bool flag_gamma;//true - гамма зависит от координат, иначе от области
 	public:
 		//*********  Основные функции ************//
 		void read_node(char *filename);//функция чтения данных об узлах
@@ -29,6 +32,8 @@ class MKE{
 		void generate_portrate();//функция генерации портрета
 		void clear_memory();//освобождение памяти
 		void calc_global();//вычисление глобальнйо матрицы
+		void set_flag_lyambda(bool value);//установка значения флага лямбды
+		void set_flag_gamma(bool value);//установка значения флага гаммы
 		//****** Вспомогательные функции *********//
 		int count_adjacence_node(int node_number);//функция подсчета смежных узлов
 		bool search_node_in_row(int row, int node, int *list, int *temp_count);//функция поиска узла в строке
@@ -37,8 +42,11 @@ class MKE{
 		void create_portrate(int **list,int *temp_count);//создание портрета матрицы
 		void calc_D(int number_felem);//вычисление матрицы D^-1
 		void calc_local(int number_felem);//вычисление локальной матрицы
-
-
+		void calc_local_pr(int number_felem);//вычисление локальной вектора правой части
+		TYPE get_lyambda(int number_felem, int num_node);//Получение лямбды в зависимости от узла
+		TYPE get_gamma(int number_felem, int num_node);//Получение гаммы в зависимости от узла
+		TYPE get_f(int number_felem, int num_node);//Получение гаммы в зависимости от узла
+		void local_in_global(int number_felem);//занесение локальной матрицы и вектора в глобальную систему
 
 		/*void read_kuslau();
 		void read_matrix_data();

@@ -167,16 +167,103 @@ void MKE::calc_D(int number_felem){//вычисление матрицы D^-1
 };
 
 void MKE::calc_local(int number_felem){
+	int a,b,c;
+	a = felem[number_felem].num[0];
+	b = felem[number_felem].num[1];
+	c = felem[number_felem].num[2];
+	TYPE det = abs(detD)/3.0;
+	TYPE l1,l2,l3,r1,r2,r3,r_summ,g1,g2,g3,g_average;
+	r1 = nodes[a].node_coord.r;
+	r2 = nodes[b].node_coord.r;
+	r3 = nodes[c].node_coord.r;
+	l1 = get_lyambda(number_felem,a);
+	l2 = get_lyambda(number_felem,b);
+	l3 = get_lyambda(number_felem,c);
+	g1 = get_gamma(number_felem,a);
+	g2 = get_gamma(number_felem,a);
+	g3 = get_gamma(number_felem,a);
+	g_average = (g1+g2+g3)/3.0;
+	r_summ = r1+r2+r3;
+	//-------- ¬ычисление матрицы жесткости
 	for(int i = 0; i < 3;i++){
 		for(int j = 0; j < 3; j++){
-			
+			 TYPE t;
+			 t = det*((r_summ/3.0*D[i][1]*D[j][1]) + (3.0/r_summ*D[i][2]*D[j][2]));
+			 Local[i][j]  = l1*t + l2*t + l3*t;
+		};
+	};
+	//-------- ¬ычисление матрицы массы
+	for(int i = 0; i < 3;i++){
+		for(int j = 0; j < 3; j++){
+			 TYPE t = g_average*(r_summ/3.0);
+			 if( i == j ) t *= abs(detD)/12.0;
+			 else t *= abs(detD)/24.0;
+			 Local[i][j]  += t;
+		};
+	};
+	
+};
+
+void MKE::calc_local_pr(int number_felem){//вычисление локальной вектора правой части
+	int a,b,c;
+	a = felem[number_felem].num[0];
+	b = felem[number_felem].num[1];
+	c = felem[number_felem].num[2];
+	TYPE r1,r2,r3,r_summ,f[3];
+	r1 = nodes[a].node_coord.r;
+	r2 = nodes[b].node_coord.r;
+	r3 = nodes[c].node_coord.r;
+	r_summ = r1+r2+r3;
+	f[0] = get_f(number_felem,a);
+	f[1] = get_f(number_felem,b);
+	f[2] = get_f(number_felem,c);
+	for(int i = 0 ; i < 3 ;i++){
+		Local_pr[i] = 0.0;
+		for(int j = 0 ; j < 3; j++){
+			TYPE t = (r_summ/3.0)*detD/24.0;
+			if( i == j ) t *= 4.0 * f[j];
+			else t *= 3.0 * f[j];
+			Local_pr[i] += t;
 		};
 	};
 };
 
-void MKE::calc_global(){
+void MKE::local_in_global(int number_felem){//занесение локальной матрицы и вектора в глобальную систему
+	int global_num[3];
+	global_num[0] = felem[number_felem].num[0];
+	global_num[1] = felem[number_felem].num[1];
+	global_num[2] = felem[number_felem].num[2];
+
+	for(int i = 0; i < 3 ;i++){
+		for(int j = 0 ; j < 3 ;j++){
+			int ii,jj;
+			ii = global_num[i];
+			jj = global_num[j];
+			if(ii == jj) A.di[ii] += Local[i][j]; 
+			else if(jj < ii){
+				
+			}
+			else{
+				
+			}
+		};
+	};
+};
+
+void MKE::calc_global(){//вычисление глобальной матрицы
 	for(int i = 0; i < count_felem ; i++){
 		calc_D(i);
 		calc_local(i);
+		calc_local_pr(i);
+		local_in_global(i);
 	}
+};
+
+
+void MKE::set_flag_lyambda(bool value){//установка значени€ флага л€мбды
+	flag_lyambda = value;
+};
+
+void MKE::set_flag_gamma(bool value){//установка значени€ флага гаммы
+	flag_gamma = value;
 };
