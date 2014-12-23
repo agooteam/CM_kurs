@@ -256,7 +256,7 @@ void MKE::local_in_global(int number_felem){//занесение локальной матрицы и вект
 				A.ggu[pos] += Local[i][j];
 			}
 		};
-		//занесение локального вектор в глобальный
+		pr[ii] += Local_pr[i]; 
 	};
 };
 
