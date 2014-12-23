@@ -47,6 +47,7 @@ class MKE{
 		TYPE get_gamma(int number_felem, int num_node);//ѕолучение гаммы в зависимости от узла
 		TYPE get_f(int number_felem, int num_node);//ѕолучение гаммы в зависимости от узла
 		void local_in_global(int number_felem);//занесение локальной матрицы и вектора в глобальную систему
+		int num_pos_in_profile(int begin , int end, int column);//поиск номера позиции в массиве gg 
 
 		/*void read_kuslau();
 		void read_matrix_data();

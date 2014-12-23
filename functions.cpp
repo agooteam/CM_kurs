@@ -65,15 +65,18 @@ void MKE::bubble_sort(int *list, int length){//пузырьковая сортировка
 
 void MKE::create_portrate(int **list,int *temp_count){//функция подсчета узлов до диагонали
 	A.di = new TYPE[count_node];
+	pr = new TYPE[count_node];
 	A.ig = new int[count_node + 1];
-	A.ig[0] = 1;
+	A.ig[0] = 0;
 	A.N = count_node;
 	int count = 0 , pos = 0;
 	for(int i = 0 ; i < count_node; i++){
 		for(int j = 0 ; j < temp_count[i]; j++){
 			if(list[i][j] < i )count++;
 		}
-		A.ig[i+1] = count + 1;
+		A.ig[i+1] = count;
+		A.di[i] = 0;
+		pr[i] = 0;
 	};
 	A.ggl = new TYPE[count];
 	A.ggu = new TYPE[count];
@@ -95,7 +98,6 @@ void MKE::create_portrate(int **list,int *temp_count){//функция подсчета узлов д
 	r = new TYPE[count_node];
 	z = new TYPE[count_node];
 	p = new TYPE[count_node];
-	pr = new TYPE[count_node];
 	x = new TYPE[count_node];
 };
 
@@ -200,8 +202,7 @@ void MKE::calc_local(int number_felem){
 			 else t *= abs(detD)/24.0;
 			 Local[i][j]  += t;
 		};
-	};
-	
+	};	
 };
 
 void MKE::calc_local_pr(int number_felem){//вычисление локальной вектора правой части
@@ -235,18 +236,27 @@ void MKE::local_in_global(int number_felem){//занесение локальной матрицы и вект
 	global_num[2] = felem[number_felem].num[2];
 
 	for(int i = 0; i < 3 ;i++){
+		int ii;
+		ii = global_num[i];
 		for(int j = 0 ; j < 3 ;j++){
-			int ii,jj;
+			int jj;
 			ii = global_num[i];
 			jj = global_num[j];
 			if(ii == jj) A.di[ii] += Local[i][j]; 
 			else if(jj < ii){
-				
+				int begin = A.ig[ii];
+				int end = A.ig[ii+1];
+				int pos = num_pos_in_profile(begin,end,jj);
+				A.ggl[pos] += Local[i][j];
 			}
 			else{
-				
+				int begin = A.ig[jj];
+				int end = A.ig[jj+1];
+				int pos = num_pos_in_profile(begin,end,ii);
+				A.ggu[pos] += Local[i][j];
 			}
 		};
+		//занесение локального вектор в глобальный
 	};
 };
 
@@ -266,4 +276,11 @@ void MKE::set_flag_lyambda(bool value){//установка значения флага лямбды
 
 void MKE::set_flag_gamma(bool value){//установка значения флага гаммы
 	flag_gamma = value;
+};
+
+int MKE::num_pos_in_profile(int begin , int end, int column){//поиск номера позиции в массиве gg 
+	
+	for(int i = begin ; i < end; i++){
+		if(A.jg[i] == column) return i;
+	};
 };

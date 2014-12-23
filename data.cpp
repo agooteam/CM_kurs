@@ -28,7 +28,7 @@ TYPE MKE::get_gamma(int number_felem, int num_node){//דאללא
 	}
 };
 
-TYPE MKE::get_gamma(int number_felem, int num_node){//דאללא
+TYPE MKE::get_f(int number_felem, int num_node){//דאללא
 	int area = felem[number_felem].nvkat;
 	switch(area){
 		case 1:return -20;	
