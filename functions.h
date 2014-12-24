@@ -8,6 +8,7 @@ class MKE{
 		TYPE Local_pr[3];//локальный вектор правой части
 		int count_felem;//количество конечных элементов
 		int count_node;//количество узлов
+		int count_kraevie;//количество краевых условий
 		TYPE detD;//Определитель матрицы D
 		TYPE *temp;//Вспомогательный вектор
 		TYPE *temp2;//Вспомогательный вектор 2
@@ -22,6 +23,7 @@ class MKE{
 		TYPE *x;//неизвестный вектор
 		node *nodes;//узлы
 		FELEM *felem;//конечные элементы
+		Kraevie *kraevie;//краевые условия
 		bool flag_lyambda;//true - лямбда зависит от координат, иначе от области
 		bool flag_gamma;//true - гамма зависит от координат, иначе от области
 	public:
@@ -29,11 +31,13 @@ class MKE{
 		void read_node(char *filename);//функция чтения данных об узлах
 		void read_felem(char *filename);//функция чтения данных конечных элементов
 		void read_los(char *filename);//функция чтения данных для ЛОС
+		void read_kraevie(char *filename);//Чтение краевых условий
 		void generate_portrate();//функция генерации портрета
 		void clear_memory();//освобождение памяти
 		void calc_global();//вычисление глобальнйо матрицы
 		void set_flag_lyambda(bool value);//установка значения флага лямбды
 		void set_flag_gamma(bool value);//установка значения флага гаммы
+		void application_kraevie();//Применение краевых условий
 		//****** Вспомогательные функции *********//
 		int count_adjacence_node(int node_number);//функция подсчета смежных узлов
 		bool search_node_in_row(int row, int node, int *list, int *temp_count);//функция поиска узла в строке
@@ -47,8 +51,13 @@ class MKE{
 		TYPE get_gamma(int number_felem, int num_node);//Получение гаммы в зависимости от узла
 		TYPE get_f(int number_felem, int num_node);//Получение гаммы в зависимости от узла
 		void local_in_global(int number_felem);//занесение локальной матрицы и вектора в глобальную систему
-		int num_pos_in_profile(int begin , int end, int column);//поиск номера позиции в массиве gg 
-
+		int num_pos_in_profile(int begin , int end, int column);//поиск номера позиции в массиве gg
+		void kraevie_1(int begin,int end,int func);//Первые краевые	
+		void kraevie_2(int begin,int end,int func);//Вторые краевые
+		void kraevie_3(int begin,int end,int func);//Третьи краевые
+		TYPE get_kraevie_1(int node, int func);//получение значение первых краевых
+		TYPE get_kraevie_2(int func);//получение значение вторых краевых
+		TYPE get_kraevie_3(int begin,int end,int func, TYPE *u_b);//получение значение третьих краевых
 		/*void read_kuslau();
 		void read_matrix_data();
 		void mul_matrix_vector(TYPE *v);

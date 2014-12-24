@@ -284,3 +284,87 @@ int MKE::num_pos_in_profile(int begin , int end, int column){//поиск номера пози
 		if(A.jg[i] == column) return i;
 	};
 };
+
+void MKE::read_kraevie(char *filename){//Чтение краевых условий
+	FILE *fp = fopen(filename,"r");
+	fscanf(fp,"%d",&count_kraevie);
+	kraevie = new Kraevie[count_kraevie];
+	for(int i = 0; i < count_kraevie; i++){
+		fscanf(fp,"%d",&kraevie[i].Begin);
+		fscanf(fp,"%d",&kraevie[i].End);
+		fscanf(fp,"%d",&kraevie[i].NumUsl);
+		fscanf(fp,"%d",&kraevie[i].NumFunc);
+		kraevie[i].Begin --;
+		kraevie[i].End --;
+	};
+	fclose(fp);
+};
+
+void MKE::application_kraevie(){//Применение краевых условий
+	for(int i = 0; i < count_kraevie ; i++){
+		int UslType = kraevie[i].NumUsl;
+		if(UslType == 1) kraevie_1(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
+		else if(UslType == 2) kraevie_2(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
+		else kraevie_3(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
+	};
+};
+
+void MKE::kraevie_1(int begin,int end,int func){//Первые краевые
+	A.di[begin] = 1;
+	A.di[end] = 1;
+	pr[begin] = get_kraevie_1(begin,func);
+	pr[end] = get_kraevie_1(end,func);	
+	for(int i = A.ig[begin]; i < A.ig[begin+1]; i++) A.ggl[i] = 0;
+	for(int i = A.ig[end]; i < A.ig[end+1]; i++) A.ggl[i] = 0;
+	int count = A.ig[count_node];
+	for(int i = 0; i < count ;i++) {
+		if(A.jg[i] == begin || A.jg[i] == end) A.ggu[i] = 0;
+	}
+};
+
+void MKE::kraevie_2(int begin,int end,int func){//Вторые краевые
+	TYPE r_avarage,tetta;
+	r_avarage = (nodes[begin].node_coord.r + nodes[end].node_coord.r)/2.0;
+	TYPE hm = pow(nodes[begin].node_coord.r - nodes[end].node_coord.r,2);
+	hm += pow(nodes[begin].node_coord.fi - nodes[end].node_coord.fi,2);
+	hm = sqrt(hm);
+	tetta = get_kraevie_2(func);
+	pr[begin] += hm*r_avarage/6.0*(3.0*tetta);
+	pr[end] += hm*r_avarage/6.0*(3.0*tetta);
+};
+
+void MKE::kraevie_3(int begin,int end,int func){//Третьи краевые
+	TYPE r_avarage,betta, ub[2], temp;
+	int global_num[2];
+	global_num[0] = begin;
+	global_num[1] = end;
+	r_avarage = (nodes[begin].node_coord.r + nodes[end].node_coord.r)/2.0;
+	TYPE hm = pow(nodes[begin].node_coord.r - nodes[end].node_coord.r,2);
+	hm += pow(nodes[begin].node_coord.fi - nodes[end].node_coord.fi,2);
+	hm = sqrt(hm);
+	betta = get_kraevie_3(begin,end,func,ub);
+	for(int i = 0; i < 2;i++){
+		int ii = global_num[i];
+		for(int j = 0; j < 2 ;j++){
+			if(i == j) temp = betta*r_avarage*hm/6.0*2.0;
+			else temp = betta*r_avarage*hm/6.0;
+			int jj = global_num[j];
+			if(ii == jj) A.di[ii] += temp; 
+			else if(jj < ii){
+				int begin = A.ig[ii];
+				int end = A.ig[ii+1];
+				int pos = num_pos_in_profile(begin,end,jj);
+				A.ggl[pos] += temp;
+			}
+			else{
+				int begin = A.ig[jj];
+				int end = A.ig[jj+1];
+				int pos = num_pos_in_profile(begin,end,ii);
+				A.ggu[pos] += temp;
+			}
+		};
+		temp = betta*r_avarage*hm/6.0;
+		if(i == 0) pr[ii] += temp*2.0*ub[0] - temp*ub[1];
+		else pr[ii] += temp*ub[0] - temp*2.0*ub[1];
+	};
+};
