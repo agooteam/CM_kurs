@@ -5,6 +5,7 @@ char *file="node.txt";
 char *file2="finit_elem.txt";
 char *file3="los.txt";
 char *file4="kraevie.txt";
+char *file5="inter_point.txt";
 MKE solve;
 
 void main(){
@@ -17,9 +18,11 @@ void main(){
 	solve.read_felem(file2);//считываем данные конечных элементов
 	solve.read_los(file3);//считываем данные для ЛОС
 	solve.read_kraevie(file4);//считываем краевые условия
+	solve.read_inter_point(file5);//считывание внутренних узлов
 	solve.generate_portrate();//генерируем портрет матрицы
 	solve.calc_global();//вычисление глобальной матрицы
 	solve.application_kraevie();//применение краевых условий
+	solve.sovle_LOS();//Решение системы уравнений
 	solve.clear_memory();//освобождаем память
 	system("pause");
 };

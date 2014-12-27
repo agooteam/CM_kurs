@@ -27,8 +27,23 @@ void MKE::read_los(char *filename){//функция чтения данных для ЛОС
 	fclose(fp);
 };
 
+void MKE::read_inter_point(char *filename){//функция чтения данных внутренних точек
+	FILE *fp = fopen(filename,"r");
+	fscanf(fp,"%d",&count_inter_point);
+	if(count_inter_point != 0 ) interpoint = new int[count_inter_point];
+	for(int i = 0; i < count_inter_point; i++){
+		fscanf(fp,"%d",&interpoint[i]);
+		interpoint[i] -- ;
+	};
+	fclose(fp);
+};
+
 int MKE::count_adjacence_node(int node_number){//подсчет смежных узлов с i - узлом
-	int count = 1;
+	bool mue = false;
+	int count;
+	for(int k = 0; k < count_inter_point && mue != true; k++) if(interpoint[k] == node_number) mue = true;
+	if(!mue) count = 1;
+	else count = 0;
 	for(int i = 0 ; i < count_felem ; i++){
 		for(int j = 0 ; j < 3 ; j++){
 			if(felem[i].num[j] == node_number) count++;
@@ -52,12 +67,15 @@ void MKE::add_node_in_row(int row,int node,int *list, int *position){
 };
 
 void MKE::bubble_sort(int *list, int length){//пузырьковая сортировка
-	for(int i = 0 ; i < length ;i++){
-		for(int j = 0 ; j < length - i - 1 ;j++){
-			if(list[j] > list[j+1]){
-				int temp = list[j];
-				list[j] = list[j+1];
-				list[j+1] = temp;
+	bool sort = true;
+	while(sort){
+		sort = false;
+		for(int i = 0 ; i < length - 1 ;i++){
+			if(list[i] > list[i+1]){
+				int tt = list[i];
+				list[i] = list[i+1];
+				list[i+1] = tt;
+				sort = true;
 			}
 		};
 	};
@@ -65,6 +83,7 @@ void MKE::bubble_sort(int *list, int length){//пузырьковая сортировка
 
 void MKE::create_portrate(int **list,int *temp_count){//функция подсчета узлов до диагонали
 	A.di = new TYPE[count_node];
+	A.cdi = new TYPE[count_node];
 	pr = new TYPE[count_node];
 	A.ig = new int[count_node + 1];
 	A.ig[0] = 0;
@@ -76,13 +95,18 @@ void MKE::create_portrate(int **list,int *temp_count){//функция подсчета узлов д
 		}
 		A.ig[i+1] = count;
 		A.di[i] = 0;
+		A.cdi[i] = 0;
 		pr[i] = 0;
 	};
 	A.ggl = new TYPE[count];
+	A.cggl = new TYPE[count];
 	A.ggu = new TYPE[count];
+	A.cggu = new TYPE[count];
 	for(int i = 0 ; i < count ;i++){
 		A.ggu[i] = 0;
 		A.ggl[i] = 0;
+		A.cggu[i] = 0;
+		A.cggl[i] = 0;
 	};
 	A.jg = new int[count];
 	for(int i = 0 ; i < count_node; i++){
@@ -138,6 +162,9 @@ void MKE::clear_memory(){//Освобождение памяти
 	delete [] A.ggu;
 	delete [] A.ggl;
 	delete [] A.di;
+	delete [] A.cdi;
+	delete [] A.cggl;
+	delete [] A.cggu;
 	delete [] temp;
 	delete [] temp2;
 	delete [] r;
@@ -174,7 +201,7 @@ void MKE::calc_local(int number_felem){
 	b = felem[number_felem].num[1];
 	c = felem[number_felem].num[2];
 	TYPE det = abs(detD)/3.0;
-	TYPE l1,l2,l3,r1,r2,r3,r_summ,g1,g2,g3,g_average;
+	TYPE l1,l2,l3,r1,r2,r3,r_summ,g1,g2,g3,g_average, r_avarage;
 	r1 = nodes[a].node_coord.r;
 	r2 = nodes[b].node_coord.r;
 	r3 = nodes[c].node_coord.r;
@@ -182,35 +209,47 @@ void MKE::calc_local(int number_felem){
 	l2 = get_lyambda(number_felem,b);
 	l3 = get_lyambda(number_felem,c);
 	g1 = get_gamma(number_felem,a);
-	g2 = get_gamma(number_felem,a);
-	g3 = get_gamma(number_felem,a);
+	g2 = get_gamma(number_felem,b);
+	g3 = get_gamma(number_felem,c);
 	g_average = (g1+g2+g3)/3.0;
+	r_avarage = (r1+r2+r3)/3.0;
 	r_summ = r1+r2+r3;
 	//-------- Вычисление матрицы жесткости
 	for(int i = 0; i < 3;i++){
 		for(int j = 0; j < 3; j++){
 			 TYPE t;
-			 t = det*((r_summ/3.0*D[i][1]*D[j][1]) + (3.0/r_summ*D[i][2]*D[j][2]));
+			 t = det*((r_avarage*D[i][1]*D[j][1]) + (1.0/r_avarage*D[i][2]*D[j][2]));
 			 Local[i][j]  = l1*t + l2*t + l3*t;
 		};
 	};
 	//-------- Вычисление матрицы массы
-	for(int i = 0; i < 3;i++){
+	/*for(int i = 0; i < 3;i++){
 		for(int j = 0; j < 3; j++){
 			 TYPE t = g_average*(r_summ/3.0);
 			 if( i == j ) t *= abs(detD)/12.0;
 			 else t *= abs(detD)/24.0;
 			 Local[i][j]  += t;
 		};
-	};	
+	};*/
+	TYPE k=g_average*abs(detD)/120.0,m[3][3];
+	m[0][0]=k*(r1*6+r2*2+r3*2); m[0][1]=k*(r1*2+r2*2+r3); m[0][2]=k*(r1*2+r2+r3*2);
+	m[1][0]=k*(r1*2+r2*2+r3); m[1][1]=k*(r1*2+r2*6+r3*2); m[1][2]=k*(r1+r2*2+r3*2);
+	m[2][0]=k*(r1*2+r2+r3*2); m[2][1]=k*(r1+r2*2+r3*2); m[2][2]=k*(r1*2+r2*2+r3*6);
+	int dda =11;
+	for(int i = 0; i < 3;i++){
+		for(int j = 0; j < 3; j++){
+			 Local[i][j]  += m[i][j];
+		};
+	};
 };
 
 void MKE::calc_local_pr(int number_felem){//вычисление локальной вектора правой части
 	int a,b,c;
+	TYPE MM[3][3],r_avarage;
 	a = felem[number_felem].num[0];
 	b = felem[number_felem].num[1];
 	c = felem[number_felem].num[2];
-	TYPE r1,r2,r3,r_summ,f[3];
+	TYPE r1,r2,r3,r_summ, f[3];
 	r1 = nodes[a].node_coord.r;
 	r2 = nodes[b].node_coord.r;
 	r3 = nodes[c].node_coord.r;
@@ -218,15 +257,11 @@ void MKE::calc_local_pr(int number_felem){//вычисление локальной вектора правой 
 	f[0] = get_f(number_felem,a);
 	f[1] = get_f(number_felem,b);
 	f[2] = get_f(number_felem,c);
-	for(int i = 0 ; i < 3 ;i++){
-		Local_pr[i] = 0.0;
-		for(int j = 0 ; j < 3; j++){
-			TYPE t = (r_summ/3.0)*detD/24.0;
-			if( i == j ) t *= 4.0 * f[j];
-			else t *= 3.0 * f[j];
-			Local_pr[i] += t;
-		};
-	};
+	r_avarage = r_summ/3.0;
+	
+	Local_pr[0] = r_avarage*abs(detD)/24.0*(2*f[0]+ f[1] + f[2]);
+	Local_pr[1] = r_avarage*abs(detD)/24.0*(f[0]+ 2*f[1] + f[2]);
+	Local_pr[2] = r_avarage*abs(detD)/24.0*(f[0]+ f[1] + 2*f[2]);
 };
 
 void MKE::local_in_global(int number_felem){//занесение локальной матрицы и вектора в глобальную систему
@@ -301,12 +336,14 @@ void MKE::read_kraevie(char *filename){//Чтение краевых условий
 };
 
 void MKE::application_kraevie(){//Применение краевых условий
+	TYPE tt =  A.di[0] + A.ggu[0] + A.ggu[1] + A.ggl[0] ;
 	for(int i = 0; i < count_kraevie ; i++){
 		int UslType = kraevie[i].NumUsl;
 		if(UslType == 1) kraevie_1(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
 		else if(UslType == 2) kraevie_2(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
 		else kraevie_3(kraevie[i].Begin,kraevie[i].End,kraevie[i].NumFunc);
 	};
+
 };
 
 void MKE::kraevie_1(int begin,int end,int func){//Первые краевые
@@ -323,18 +360,31 @@ void MKE::kraevie_1(int begin,int end,int func){//Первые краевые
 };
 
 void MKE::kraevie_2(int begin,int end,int func){//Вторые краевые
-	TYPE r_avarage,tetta;
-	r_avarage = (nodes[begin].node_coord.r + nodes[end].node_coord.r)/2.0;
-	TYPE hm = pow(nodes[begin].node_coord.r - nodes[end].node_coord.r,2);
+	TYPE tetta,MM[2][2],r1,r2,mm[2];
+	r1 = nodes[begin].node_coord.r;
+	r2 = nodes[end].node_coord.r;
+	TYPE hm = pow(r1 - r2,2);
 	hm += pow(nodes[begin].node_coord.fi - nodes[end].node_coord.fi,2);
 	hm = sqrt(hm);
 	tetta = get_kraevie_2(func);
-	pr[begin] += hm*r_avarage/6.0*(3.0*tetta);
-	pr[end] += hm*r_avarage/6.0*(3.0*tetta);
+	/*MM[0][0] = hm/12.0*(3.0*r1 + r2);
+	MM[0][1] = hm/12.0*(r1 + r2);
+	MM[1][0] = hm/12.0*(r1 + r2);
+	MM[1][1] = hm/12.0*(r1 + 3.0*r2);
+	for(int i = 0 ; i < 2 ;i++){
+		mm[i] = 0.0;
+		for(int j = 0 ; j < 2; j++){
+			mm[i] += MM[i][j]*tetta;
+		};
+	};
+	pr[begin] += mm[0];
+	pr[end] += mm[1];*/
+	pr[begin] += hm*((r1+r2)/2.0)/6.0*(3.0*tetta);
+	pr[end] += hm*((r1+r2)/2.0)/6.0*(3.0*tetta);
 };
 
 void MKE::kraevie_3(int begin,int end,int func){//Третьи краевые
-	TYPE r_avarage,betta, ub[2], temp;
+	TYPE r_avarage,betta, ub[2], temp,MM[2][2];
 	int global_num[2];
 	global_num[0] = begin;
 	global_num[1] = end;
@@ -343,28 +393,176 @@ void MKE::kraevie_3(int begin,int end,int func){//Третьи краевые
 	hm += pow(nodes[begin].node_coord.fi - nodes[end].node_coord.fi,2);
 	hm = sqrt(hm);
 	betta = get_kraevie_3(begin,end,func,ub);
+	MM[0][0] = betta*hm*r_avarage/6.0*2.0;
+	MM[0][1] = betta*hm*r_avarage/6.0;
+	MM[1][0] = betta*hm*r_avarage/6.0;
+	MM[1][1] = betta*hm*r_avarage/6.0*2.0;
 	for(int i = 0; i < 2;i++){
 		int ii = global_num[i];
 		for(int j = 0; j < 2 ;j++){
-			if(i == j) temp = betta*r_avarage*hm/6.0*2.0;
-			else temp = betta*r_avarage*hm/6.0;
 			int jj = global_num[j];
-			if(ii == jj) A.di[ii] += temp; 
+			if(ii == jj) A.di[ii] += MM[i][j]; 
 			else if(jj < ii){
 				int begin = A.ig[ii];
 				int end = A.ig[ii+1];
 				int pos = num_pos_in_profile(begin,end,jj);
-				A.ggl[pos] += temp;
+				A.ggl[pos] += MM[i][j];
 			}
 			else{
 				int begin = A.ig[jj];
 				int end = A.ig[jj+1];
 				int pos = num_pos_in_profile(begin,end,ii);
-				A.ggu[pos] += temp;
+				A.ggu[pos] += MM[i][j];
 			}
 		};
-		temp = betta*r_avarage*hm/6.0;
-		if(i == 0) pr[ii] += temp*2.0*ub[0] - temp*ub[1];
-		else pr[ii] += temp*ub[0] - temp*2.0*ub[1];
+		pr[ii] += MM[i][0]*ub[0] + MM[i][1]*ub[1];
 	};
+};
+
+
+void MKE::mul_matrix_vector(TYPE *v){
+	for(int i = 0 ; i < count_node ;i++) temp[i] = 0;
+	for(int i = 0 ; i < count_node ; i++){
+		temp[i] += A.di[i]*v[i];
+		int count_elem = A.ig[i+1] - A.ig[i];
+		for(int p = 0 ; p < count_elem; p++){
+			int m = A.ig[i]+p;
+			int column = A.jg[m];
+			temp[i] += A.ggl[m]*v[column];
+			temp[column] += A.ggu[m] * v[i];
+		}
+	}
+};
+
+void MKE::sovle_LOS(){
+	int k = 1;
+	dec_LU_sq();
+	calc_start_values();
+	for(; k < maxiter && calc_otn_nevazka() > eps; k++) LOS_LU_sq();
+	TYPE mm = calc_otn_nevazka();
+	write_result(k,mm);
+};
+//------------------------------- ЛОС -------------------------------------
+TYPE square_norma(TYPE *v, TYPE *m , int size){
+	TYPE summ = 0;
+	for(int i = 0; i < size ; i++ ) summ += v[i]*m[i];
+	return summ;
+};
+
+TYPE norma(TYPE *v, TYPE *m , int size){
+	TYPE summ = 0;
+	for(int i = 0; i < size ; i++ ) summ += v[i]*m[i];
+	summ = sqrt(summ);
+	return summ;
+};
+
+TYPE summ_vector(TYPE *v, TYPE *m , TYPE *res, int size){
+	TYPE summ = 0;
+	for(int i = 0; i < size ; i++ ) res[i] = v[i]+m[i];
+	return *res;
+};
+
+
+TYPE MKE::calc_otn_nevazka(){
+	TYPE q1,q2;
+	q1 = norma(r,r,A.N);
+	q2 = norma(pr,pr,A.N);
+	q1 /= q2; 
+	return q1;
+};
+
+void MKE::LOS_LU_sq(){
+	alfa = square_norma(p,r,A.N)/square_norma(p,p,A.N);
+	for(int i = 0; i < A.N ; i++){
+		x[i] += alfa*z[i];
+		r[i] -= alfa*p[i];
+	}
+	reverse(r,temp2);
+	mul_matrix_vector(temp2);
+	direct(temp,temp2);
+	betta = -square_norma(p,temp2,A.N)/square_norma(p,p,A.N);
+	reverse(r,temp);
+	for(int i = 0; i < A.N ; i++){
+		z[i] = temp[i] + betta*z[i];//
+		p[i] = temp2[i] + betta*p[i];
+	}
+};
+
+
+void MKE::write_result(int total,TYPE nevyazka){
+	FILE * fp = fopen("result.txt","w");
+	for(int i = 0; i < A.N ; i++) fprintf(fp,FRM_STR_OUT,x[i]);
+	fprintf(fp,"\n");
+	fprintf(fp,"Невязка: "FRM_STR_EPS,nevyazka);
+	fprintf(fp,"Выполнено: %d итерций\n",total);
+	fclose(fp);
+};
+
+void MKE::calc_start_values(){
+	for(int i = 0; i < A.N ;i++) x[i] = 0;
+	direct(pr,r);
+	reverse(r,z);
+	mul_matrix_vector(z);
+	direct(temp,p);
+	
+};
+
+void MKE::dec_LU_sq(){
+	int i,j,kol,kl=0,ku=0;
+	for(i = 0 ; i < A.N; i++){
+		kol = A.ig[i+1] - A.ig[i];
+		for(j = 0; j < kol; j++){
+			A.cggl[kl] = (A.ggl[kl] - dec_calc_elem(i,j,kl)) / A.cdi[A.jg[kl]];
+			kl++;
+		}
+		for(j = 0;j < kol; j++){
+			A.cggu[ku] = (A.ggu[ku] - dec_calc_elem(i,j,ku)) / A.cdi[A.jg[ku]];
+			ku++;
+		}
+		A.cdi[i] = sqrt(A.di[i] - dec_calc_diag(j,kl));
+	}
+
+};
+
+TYPE MKE::dec_calc_elem(int i, int j, int current_elem){
+	TYPE s = 0;
+	int k,J=A.jg[current_elem],p;
+	for( k = j ; k > 0; k--){
+		for(p = A.ig[J];p < A.ig[J+1]; p++) if(A.jg[p] == A.jg[current_elem - k]) s+= A.cggl[current_elem - k]*A.cggu[p];
+	}
+	return s;
+};
+
+TYPE MKE::dec_calc_diag(int j, int current_elem){
+	TYPE s=0;
+	int k;
+	for( k = current_elem-j; k < current_elem; k++) s += A.cggl[k]*A.cggu[k];
+	return s;
+};
+
+void MKE::direct(TYPE *in,TYPE *out){
+	int k = 0,column,count;
+	for(int i = 0; i < A.N; i++) out[i] = in[i];
+	for(int i = 0 ; i < A.N; i++){	
+		TYPE s=0;
+		count = A.ig[i+1] - A.ig[i];
+		for(int j = 0; j < count; j++, k++){ 	
+			column = A.jg[k];
+			s+= A.cggl[k]*out[column];
+		}
+		out[i] = (out[i]-s) / A.cdi[i];
+	}
+};
+
+void MKE::reverse(TYPE *in,TYPE *out){
+	int k = A.ig[A.N] - A.ig[0]-1,count,column;
+	for(int i = 0; i < A.N; i++) out[i] = in[i];
+	for(int i = A.N-1; i>=0; i--){	
+		out[i] = out[i]/A.cdi[i];
+		count = A.ig[i+1] - A.ig[i];
+		for(int j = 0; j < count; j++, k--){	
+			column = A.jg[k];
+			out[column] -= A.cggu[k]*out[i];
+		}	
+	}
 };
