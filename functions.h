@@ -62,8 +62,8 @@ class MKE{
 		void kraevie_1(int begin,int end,int func);//Первые краевые	
 		void kraevie_2(int begin,int end,int func);//Вторые краевые
 		void kraevie_3(int begin,int end,int func);//Третьи краевые
-		TYPE get_kraevie_1(int node, int func);//получение значение первых краевых
-		TYPE get_kraevie_2(int func);//получение значение вторых краевых
+		TYPE get_kraevie_1(int node_num, int func);//получение значение первых краевых
+		TYPE get_kraevie_2(int node_num, int func);//получение значение вторых краевых
 		TYPE get_kraevie_3(int begin,int end,int func, TYPE *u_b);//получение значение третьих краевых
 		//********* LOS ***********//
 		TYPE calc_otn_nevazka();//вычисление относительной невязки

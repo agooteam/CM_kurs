@@ -201,7 +201,7 @@ void MKE::calc_local(int number_felem){
 	b = felem[number_felem].num[1];
 	c = felem[number_felem].num[2];
 	TYPE det = abs(detD)/3.0;
-	TYPE l1,l2,l3,r1,r2,r3,r_summ,g1,g2,g3,g_average, r_avarage;
+	TYPE l1,l2,l3,r1,r2,r3,r_summ,g1,g2,g3,g_average, r_avarage,gg[3][3],mm[3][3];
 	r1 = nodes[a].node_coord.r;
 	r2 = nodes[b].node_coord.r;
 	r3 = nodes[c].node_coord.r;
@@ -219,26 +219,21 @@ void MKE::calc_local(int number_felem){
 		for(int j = 0; j < 3; j++){
 			 TYPE t;
 			 t = det*((r_avarage*D[i][1]*D[j][1]) + (1.0/r_avarage*D[i][2]*D[j][2]));
-			 Local[i][j]  = l1*t + l2*t + l3*t;
+			 gg[i][j]  = l1*t + l2*t + l3*t;
 		};
 	};
 	//-------- Вычисление матрицы массы
-	/*for(int i = 0; i < 3;i++){
-		for(int j = 0; j < 3; j++){
-			 TYPE t = g_average*(r_summ/3.0);
-			 if( i == j ) t *= abs(detD)/12.0;
-			 else t *= abs(detD)/24.0;
-			 Local[i][j]  += t;
-		};
-	};*/
-	TYPE k=g_average*abs(detD)/120.0,m[3][3];
-	m[0][0]=k*(r1*6+r2*2+r3*2); m[0][1]=k*(r1*2+r2*2+r3); m[0][2]=k*(r1*2+r2+r3*2);
-	m[1][0]=k*(r1*2+r2*2+r3); m[1][1]=k*(r1*2+r2*6+r3*2); m[1][2]=k*(r1+r2*2+r3*2);
-	m[2][0]=k*(r1*2+r2+r3*2); m[2][1]=k*(r1+r2*2+r3*2); m[2][2]=k*(r1*2+r2*2+r3*6);
-	int dda =11;
 	for(int i = 0; i < 3;i++){
 		for(int j = 0; j < 3; j++){
-			 Local[i][j]  += m[i][j];
+			 TYPE t = g_average*r_avarage;
+			 if( i == j ) t *= abs(detD)/12.0;
+			 else t *= abs(detD)/24.0;
+			 mm[i][j] = t;
+		};
+	};
+	for(int i = 0; i < 3;i++){
+		for(int j = 0; j < 3; j++){
+			Local[i][j] = gg[i][j] + mm[i][j];
 		};
 	};
 };
@@ -360,27 +355,15 @@ void MKE::kraevie_1(int begin,int end,int func){//Первые краевые
 };
 
 void MKE::kraevie_2(int begin,int end,int func){//Вторые краевые
-	TYPE tetta,MM[2][2],r1,r2,mm[2];
-	r1 = nodes[begin].node_coord.r;
-	r2 = nodes[end].node_coord.r;
-	TYPE hm = pow(r1 - r2,2);
+	TYPE tetta1,tetta2,r_avarage;
+	r_avarage = (nodes[begin].node_coord.r + nodes[end].node_coord.r)/2.0;
+	TYPE hm = pow(nodes[begin].node_coord.r - nodes[end].node_coord.r,2);
 	hm += pow(nodes[begin].node_coord.fi - nodes[end].node_coord.fi,2);
 	hm = sqrt(hm);
-	tetta = get_kraevie_2(func);
-	/*MM[0][0] = hm/12.0*(3.0*r1 + r2);
-	MM[0][1] = hm/12.0*(r1 + r2);
-	MM[1][0] = hm/12.0*(r1 + r2);
-	MM[1][1] = hm/12.0*(r1 + 3.0*r2);
-	for(int i = 0 ; i < 2 ;i++){
-		mm[i] = 0.0;
-		for(int j = 0 ; j < 2; j++){
-			mm[i] += MM[i][j]*tetta;
-		};
-	};
-	pr[begin] += mm[0];
-	pr[end] += mm[1];*/
-	pr[begin] += hm*((r1+r2)/2.0)/6.0*(3.0*tetta);
-	pr[end] += hm*((r1+r2)/2.0)/6.0*(3.0*tetta);
+	tetta1 = get_kraevie_2(begin,func);
+	tetta2 = get_kraevie_2(end,func);
+	pr[begin] += hm/6.0*r_avarage*(2.0 * tetta1 + tetta2);
+	pr[end] += hm/6.0*r_avarage*(tetta1 + 2.0 *tetta2);
 };
 
 void MKE::kraevie_3(int begin,int end,int func){//Третьи краевые
